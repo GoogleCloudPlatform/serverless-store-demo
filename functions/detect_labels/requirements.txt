@@ -1,0 +1,2 @@
+google-cloud-firestore==0.30.0
+google-cloud-vision==0.35.1

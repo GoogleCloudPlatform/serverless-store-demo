@@ -1,0 +1,31 @@
+<section class="hero is-light is-bold">
+  <div class="hero-body">
+    <div class="container"><h1 class="title">Payment</h1></div>
+    <br><br><br>
+    <div class="container">
+      <label class="label">Credit/Debit Card</label>
+      <br>
+      <div class="columns">
+        <div class="column">
+          <div id="card-element"></div>
+          <br>
+          <div id="card-errors" class="label has-text-danger" role="alert" style="display: none;"></div>
+          <script src="https://js.stripe.com/v3/"></script>
+          <script src="/static/stripe.js"></script>
+        </div>
+        <div class="column is-one-fifth">
+          <button id="stripe_pay_button" class="button is-fullwidth has-background-dark has-text-white" style="border: none;" onclick="stripePayButtonClicked()">Pay</button>
+        </div>
+      </div>
+      <label class="label">Wallet</label>
+      <br>
+      <div class="columns">
+        <div class="column is-one-fifth">
+          <div id="google-pay"></div>
+        </div>
+        <script src="/static/googlePay.js"></script>
+        <script async src="https://pay.google.com/gp/p/js/pay.js" onload="onGooglePayLoaded()"></script>
+      </div>
+    </div>
+  </div>
+</section>

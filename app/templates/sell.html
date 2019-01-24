@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Serverless Store: Checkout{% endblock %}
+{% block head_extension %}
+  <link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet">
+  <link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css" rel="stylesheet">
+{% endblock %}
+{% block content %}
+  <section class="hero is-medium">
+    <div class="hero-body">
+      <div class="container">
+        <h1 class="title">Join the marketplace</h1>
+        <h2 class="subtitle">
+          It's easy to make a listing. Add an image and some description, we'll handle the rest for you.
+        </h2>
+      </div>
+    </div>
+  </section>
+  <form id="sell-form" action="/sell" method="POST">
+    {{ form.csrf_token }}
+    <input id="image" name="image" type="hidden" value="">
+    <input id="name" name="name" type="hidden" value="">
+    <input id="description" name="description" type="hidden" value="">
+    <input id="price" name="price" type="hidden" value="">
+  </form>
+  <section class="section is-paddingless">
+    <div class="container">
+      <div class="level">
+        <div class="level-left">
+          <div class="level-item">
+            <div><span class="icon is-medium has-text-danger"><i class="fas fa-lg fa-camera-retro"></i></span></div>
+          </div>
+          <div class="level-item">
+            <div>
+              <p class="subtitle">A picture is worth a thousand words. So they say.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% include "parts/sell_image_uploader.html" %}
+  <br>
+  {% include "parts/sell_info_form.html" %}
+{% endblock %}

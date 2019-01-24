@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Serverless Store: Checkout{% endblock %}
+{% block head_extension %}
+  <link rel="stylesheet" href="/static/stripe.css">
+{% endblock %}
+{% block content %}
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container">
+        <h2 class="subtitle">You are ordering</h2>
+      </div>
+      <br>
+      {% include "parts/checkout_product_preview.html" %}
+    </div>
+  </section>
+  <form id="payment-form" action="/charge" method="POST">
+    {{ form.csrf_token }}
+    {% for i in range(products|length) %}
+    <input type="hidden" id="product_id" name="product_ids-{{i}}" value="{{ products[i].id }}">
+    {% endfor %}
+    <input type="hidden" id="address_1" name="address_1" value="">
+    <input type="hidden" id="address_2" name="address_2" value="">
+    <input type="hidden" id="city" name="city" value="">
+    <input type="hidden" id="state" name="state" value="">
+    <input type="hidden" id="zip_code" name="zip_code" value="">
+    <input type="hidden" id="email" name="email" value="">
+    <input type="hidden" id="mobile" name="mobile" value="">
+  </form>
+  {% include "parts/checkout_shipping_form.html" %}
+  {% include "parts/checkout_payment_form.html" %}
+{% endblock %}

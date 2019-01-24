@@ -1,0 +1,10 @@
+flask==1.0.2
+Flask-WTF==0.14.2
+Jinja2==2.10
+google-cloud-storage==1.13.0
+google-cloud-firestore==0.30.0
+google-cloud-pubsub==0.39.0
+google-cloud-trace==0.20.2
+google-python-cloud-debugger==2.9
+firebase-admin==2.14.0
+opencensus==0.1.10

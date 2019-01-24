@@ -1,0 +1,26 @@
+{
+  "name": "streameventsapp",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">8.0.0"
+  },
+  "description": "App Engine service for streaming events to BigQuery in the demo.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@google-cloud/bigquery": "^2.0.5",
+    "express": "^4.16.4"
+  },
+  "devDependencies": {
+    "eslint": "^5.11.1",
+    "prettier": "^1.15.3",
+    "eslint-plugin-prettier": "^3.0.0",
+    "eslint-plugin-node": "^8.0.0",
+    "eslint-config-prettier": "^3.3.0"
+  }
+}

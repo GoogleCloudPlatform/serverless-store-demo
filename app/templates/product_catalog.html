@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Serverless Store{% endblock %}
+{% block content %}
+  <section class="hero is-primary is-bold is-medium">
+    <div class="hero-body">
+      <div class="container">
+        <h1 class="title">Buy and Sell Fashion & Style Online</h1>
+        <h2 class="subtitle">Give new life to your used lifestyle items and discover inspiring
+          fashion ideas and trends. All within your local community. <strong>Start exploring now.</strong></h2>
+      </div>
+    </div>
+  </section>
+  {% if promos %}
+  <section class="section">
+    {% include "parts/product_catalog_promo.html" %}
+  </section>
+  {% endif %}
+  <section class="section">
+    {% include "parts/product_catalog_whatsnew.html" %}
+  </section>
+{% endblock %}

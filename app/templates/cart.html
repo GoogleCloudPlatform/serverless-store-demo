@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Serverless Store: Cart{% endblock %}
+{% block content %}
+  <section class="hero is-warning is-small">
+    <div class="hero-body">
+      <div class="container">
+        <h1 class="title">Shopping Cart</h1>
+      </div>
+    </div>
+  </section>
+  {% for item in cart %}
+  <section id="section-{{ item.info.id }}" class="section">
+    <div class="container">
+      <article class="media">
+        <figure class="media-left">
+          <p class="image is-128x128">
+            <img src="https://storage.cloud.google.com/{{ bucket }}/{{ item.info.image }}.png" onerror="this.src='https://storage.cloud.google.com/{{bucket}}/placeholder.png'">
+          </p>
+        </figure>
+        <div class="media-content">
+          <div class="content">
+            <h2 class="title">{{ item.info.name }}</h1>
+            <p class="subtitle">{{ item.info.description }}</p>
+            <p class="subtitle">${{ item.info.price }}</p>
+          </div>
+        </div>
+        <div class="media-right">
+          <a class="button" data-product-id="{{ item.info.id }}" onclick="removeFromCartInCart(this)"><i class="fas fa-trash"></i></a>
+        </div>
+      </article>
+    </div>
+  </section>
+  {% endfor %}
+  <section class="section">
+    <div class="container">
+      <a class="button is-warning is-medium is-pulled-right" href="/checkout?from_cart=1">
+        <span class="icon"><i class="fas fa-money-bill-alt"></i></span>
+        <span><strong>Check Out</strong></span>
+      </a>
+    </div>
+  </section>
+{% endblock%}

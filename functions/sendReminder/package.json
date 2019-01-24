@@ -1,0 +1,27 @@
+{
+  "name": "old-cart-item-reminder",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">8.0.0"
+  },
+  "description": "Cloud Function for reminding customers of old cart items via email.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/firestore": "^0.19.0",
+    "@sendgrid/mail": "^6.3.1",
+    "firebase-admin": "^6.4.0",
+    "pug": "^2.0.3"
+  },
+  "devDependencies": {
+    "eslint": "^5.11.1",
+    "prettier": "^1.15.3",
+    "eslint-plugin-prettier": "^3.0.0",
+    "eslint-plugin-node": "^8.0.0",
+    "eslint-config-prettier": "^3.3.0"
+  }
+}

@@ -1,0 +1,39 @@
+<div class="container">
+  <h1 class="title">What's new</h1><br>
+</div>
+<div class="container">
+  <div class="tile is-ancester">
+    {% for column in [0,1,2] %}
+    <div class="tile is-parent is-4 is-vertical">
+      <div class="tile is-child"> 
+        {% for product in products[column::3] %}
+        <div class="card">
+          <div class="card-image">
+            <figure class="image is-square">
+              <img src="https://storage.cloud.google.com/{{ bucket }}/{{ product.image }}.png" onerror="this.src='https://storage.cloud.google.com/{{bucket}}/placeholder.png'">
+            </figure>
+          </div>
+          <div class="card-content">
+            <h1 class="title is-spaced">{{ product.name }}</h1>
+            <p class="subtitle is-6">{{ product.description }}</p>
+            <p class="subtitle is-4">${{ product.price }}</p>
+            <p>
+              {% for label in product.labels[:3] %}
+              <span class="tag is-light is-medium">{{ label }}</span>
+              {% endfor %}
+            </p>
+          </div>
+          <div class="card-footer">
+            <a class="card-footer-item" href="/checkout?id={{product.id}}">Purchase</a>
+            {% if auth_context %}
+            <a class="card-footer-item" data-product-id="{{ product.id }}" onclick="addToCartInProductCatalog(this)">Add to Cart</a>
+            {% endif %}
+          </div>
+        </div>
+        <br>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>

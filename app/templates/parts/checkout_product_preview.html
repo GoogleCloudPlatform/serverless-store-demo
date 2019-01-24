@@ -1,0 +1,21 @@
+{% for product in products %}
+<div class="container">
+  <article class="media">
+    <figure class="media-left">
+      <p class="image is-128x128">
+      <img src="https://storage.cloud.google.com/{{bucket}}/{{ product.image }}.png" onerror="this.src='https://storage.cloud.google.com/{{bucket}}/placeholder.png'">
+      </p>
+    </figure>
+    <div class="media-content">
+      <div class="content">
+      <p>
+        <strong>{{ product.name }}</strong>
+        <br>
+        {{ product.description }}
+        <h1 class="title has-text-weight-light">${{ product.price }}</h1>
+      </p>
+      </div>
+    </div>
+  </article>
+</div>
+{% endfor %}
