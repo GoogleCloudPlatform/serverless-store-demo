@@ -63,4 +63,4 @@ a step-by-step guide for setting up this demo.
 
 ## Conferences featuring Serverless Store
 
-[Google Cloud Global Digital Conference 2019](/https://cloudonair.withgoogle.com/events/app-dev).
+[Google Cloud Global Digital Conference 2019](https://cloudonair.withgoogle.com/events/app-dev).
