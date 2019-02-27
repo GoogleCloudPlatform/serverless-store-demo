@@ -27,7 +27,9 @@ from google.cloud import firestore
 from google.cloud import storage
 
 AUTOML_MODEL_ID = os.environ.get('AUTOML_MODEL_ID')
-AUTOML_PROJECT = os.environ.get('GCP_PROJECT')
+AUTOML_PROJECT = os.environ.get('AUTOML_PROJECT')
+if not AUTOML_PROJECT:
+    AUTOML_PROJECT = os.environ.get('GCP_PROJECT')
 BUCKET = os.environ.get('GCS_BUCKET')
 
 automl_predict_client = automl_v1beta1.PredictionServiceClient()
