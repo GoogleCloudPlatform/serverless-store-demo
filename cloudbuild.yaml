@@ -1,0 +1,58 @@
+# Copyright 2018 Google LLC.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# See [Set up Serverless Store: Part 3](https://medium.com/@ratrosy/set-up-serverless-store-part-3-computing-cron-jobs-and-management-tools-34d51475df70)
+# for more information about this specification.
+
+steps:
+# Cloud Build Step #1: Clone source code from GitHub
+- name: 'gcr.io/cloud-builders/git'
+  args: ['clone', 'https://github.com/GoogleCloudPlatform/cloud-builders']
+# Cloud Build Step #2: Replace placeholder configurations in the project with
+#                      Project specific ones from Google Cloud Storage.
+- name: 'gcr.io/cloud-builders/gcs-fetcher'
+  args:
+  - '--type=Manifest'
+  - '--location=gs://${PROJECT_ID}-build/cloudbuild/gcsFetcherManifest.json'
+# Cloud Build Step #3: Deploy the App Engine app.
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['app', 'deploy', 'app/app.yaml']
+# Cloud Build Step #4: Deploy the App Engine service for streaming events to
+# Google BigQuery.
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['app', 'deploy', 'extras/streamEventsApp/app.yaml']
+# Cloud Build Step #5: Deploy the Cloud Function for identifying pet product
+# images using Google Cloud AutoML Vision API.
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'deploy', 'automl', '--source=./functions/automl/', '--runtime=python37', '--trigger-topic=new-product', '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml']
+# Cloud Build Step #6: Deploy the Cloud Function for labeling product images
+# using Google Cloud Vision API.
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'deploy', 'detect_labels', '--source=./functions/detect_labels/', '--runtime=python37', '--trigger-topic=new-product', '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml']
+# Cloud Build Step #7: Deploy the Cloud Function for processing payments using
+# Stripe API.
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'deploy', 'pay_with_stripe', '--source=./functions/pay_with_stripe/', '--runtime=python37', '--trigger-topic=payment-process', '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml']
+# Cloud Build Step #8: Deploy the Cloud Function for sending order confirmation
+# emails using SendGrid API.
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'deploy', 'sendOrderConfirmation', '--source=./functions/sendOrderConfirmation/', '--runtime=nodejs8', '--trigger-topic=payment-completion', '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml']
+# Cloud Build Step #9: Deploy the Cloud Function for sending reminder emails
+# using SendGrid API.
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'deploy', 'sendReminder', '--source=./functions/sendReminder/', '--runtime=nodejs8', '--trigger-http', '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml']
+# Cloud Build Step #10: Deploy the Cloud Function for processing uploaded
+# images.
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'deploy', 'upload_image', '--source=./functions/upload_image/', '--runtime=python37', '--trigger-http', '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml']
