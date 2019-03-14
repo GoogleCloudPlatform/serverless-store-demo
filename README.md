@@ -47,6 +47,7 @@ This project integrates the following Google products/services:
 | Management Tools | Google Stackdriver Error Reporting | Error identification and reporting tool |
 | Developer Tools | Google Cloud Build | CI/CD solution |
 | Smart Home | Google Assistant | AI-powered virtual assistant |
+| Business & Collaboration | Google Sheets | Collaborative, extensible online spreadsheets for home and enterprise users. |
 
 ## Architecture Overview
 
