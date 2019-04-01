@@ -56,3 +56,7 @@ steps:
 # images.
 - name: 'gcr.io/cloud-builders/gcloud'
   args: ['functions', 'deploy', 'upload_image', '--source=./functions/upload_image/', '--runtime=python37', '--trigger-http', '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml']
+# Cloud Build Step #11: Deploy the Cloud Function for recommendations.
+# images.
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['functions', 'deploy', 'recommendation', '--source=./functions/recommendation/', '--runtime=nodejs8', '--trigger-http']

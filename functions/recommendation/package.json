@@ -1,0 +1,27 @@
+{
+  "name": "recommendation",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">8.0.0"
+  },
+  "description": "Cloud Function for recommending products based on Google Sheet data.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint *.js",
+    "fix": "eslint *.js --fix"
+  },
+  "keywords": [
+    "google-cloud-functions",
+    "microservice"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "eslint": "^5.14.1",
+    "eslint-config-google": "^0.12.0"
+  },
+  "dependencies": {
+    "googleapis": "^37.2.0"
+  }
+}
