@@ -47,11 +47,11 @@ steps:
 # Cloud Build Step #8: Deploy the Cloud Function for sending order confirmation
 # emails using SendGrid API.
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'sendOrderConfirmation', '--source=./functions/sendOrderConfirmation/', '--runtime=nodejs8', '--trigger-topic=payment-completion', '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml']
+  args: ['functions', 'deploy', 'sendOrderConfirmation', '--source=./functions/sendOrderConfirmation/', '--runtime=nodejs10', '--trigger-topic=payment-completion', '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml']
 # Cloud Build Step #9: Deploy the Cloud Function for sending reminder emails
 # using SendGrid API.
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'sendReminder', '--source=./functions/sendReminder/', '--runtime=nodejs8', '--trigger-http', '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml']
+  args: ['functions', 'deploy', 'sendReminder', '--source=./functions/sendReminder/', '--runtime=nodejs10', '--trigger-http', '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml']
 # Cloud Build Step #10: Deploy the Cloud Function for processing uploaded
 # images.
 - name: 'gcr.io/cloud-builders/gcloud'
@@ -59,4 +59,4 @@ steps:
 # Cloud Build Step #11: Deploy the Cloud Function for recommendations.
 # images.
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['functions', 'deploy', 'recommendation', '--source=./functions/recommendation/', '--runtime=nodejs8', '--trigger-http']
+  args: ['functions', 'deploy', 'recommendation', '--source=./functions/recommendation/', '--runtime=nodejs10', '--trigger-http']
