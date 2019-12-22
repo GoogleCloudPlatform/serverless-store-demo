@@ -18,5 +18,9 @@
     "extras/cloudbuild/functions_env_vars.yaml": {
         "sourceUrl": "gs://YOUR-PROJECT-ID-build/cloudbuild/functions_env_vars.yaml",
         "sha1sum": ""
+    },
+    "extras/streamEventsApp.yaml": {
+        "sourceUrl": "gs://YOUR-PROJECT-ID-build/cloudbuild/app_stream_events.yaml",
+        "sha1sum": ""
     }
 }
