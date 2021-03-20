@@ -1,6 +1,6 @@
 flask==1.0.2
 Flask-WTF==0.14.2
-Jinja2==2.10
+Jinja2==2.11.3
 google-cloud-storage==1.13.0
 google-cloud-firestore==0.30.0
 google-cloud-pubsub==0.39.0
