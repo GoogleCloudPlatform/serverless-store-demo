@@ -8,3 +8,4 @@ google-cloud-trace==0.20.2
 google-python-cloud-debugger==2.9
 firebase-admin==2.14.0
 opencensus==0.1.10
+MarkupSafe==2.1.1

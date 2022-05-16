@@ -17,5 +17,5 @@ runtime: nodejs10
 service: stream-events
 
 env_variables:
-  BIGQUERY_DATASET: YOUR-DATASET
-  BIGQUERY_TABLE: YOUR-TABLE
+  BIGQUERY_DATASET: sample_data
+  BIGQUERY_TABLE: sample_table

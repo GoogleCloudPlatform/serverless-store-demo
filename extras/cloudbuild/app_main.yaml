@@ -12,20 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 runtime: python37
 
 env_variables:
-  GCP_PROJECT: "YOUR-PROJECT"
-  PUBSUB_TOPIC_NEW_PRODUCT: "YOUR-NEW-PRODUCT-TOPIC"
-  PUBSUB_TOPIC_PAYMENT_PROCESS: "YOUR-PAYMENT-TOPIC"
-  GCS_BUCKET: "YOUR-GCS-BUCKET"
-  FIREBASE_CONFIG: "firebase_config.json"
+  GCP_PROJECT: 'ubc-serverless-compliance'
+  PUBSUB_TOPIC_NEW_PRODUCT: 'new-product'
+  PUBSUB_TOPIC_PAYMENT_PROCESS: 'payment-process'
+  GCS_BUCKET: 'serverless-store-bucket-1-gokce'
+  FIREBASE_CONFIG: 'firebase_config.json'
 
 handlers:
   - url: /static
     static_dir: static
-  
+
   - url: /.*
     script: auto
     secure: always

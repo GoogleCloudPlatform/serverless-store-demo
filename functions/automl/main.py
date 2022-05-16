@@ -41,26 +41,28 @@ def automl(data, context):
         request_json = base64.b64decode(data.get('data')).decode()
         request = json.loads(request_json)
         product_id = request.get('event_context').get('product_id')
-        product_image = request.get('event_context').get('product_image')
+        # product_image = request.get('event_context').get('product_image')
 
-        bucket = storage_client.get_bucket(BUCKET)
-        blob = bucket.blob(f'{product_image}.png')
-        image_data = blob.download_as_string()
+        # bucket = storage_client.get_bucket(BUCKET)
+        # blob = bucket.blob(f'{product_image}.png')
+        # image_data = blob.download_as_string()
 
-        model_name = f'projects/{AUTOML_PROJECT}/locations/us-central1/models/{AUTOML_MODEL_ID}'
-        payload = {
-            'image': {
-                'image_bytes': image_data
-            }
-        }
-        response = automl_predict_client.predict(model_name, payload)
-        top_result = response.payload[0]
-        label = top_result.display_name
-        score = top_result.classification.score
+        # model_name = f'projects/{AUTOML_PROJECT}/locations/us-central1/models/{AUTOML_MODEL_ID}'
+        # payload = {
+        #     'image': {
+        #         'image_bytes': image_data
+        #     }
+        # }
+        # response = automl_predict_client.predict(model_name, payload)
+        # top_result = response.payload[0]
+        # label = top_result.display_name
+        # score = top_result.classification.score
 
         firestore_client.collection('promos').document(product_id).set({
-            'label': label,
-            'score': score
+            # 'label': label,
+            # 'score': score
+            'label': "label",
+            'score': "score"
         })
 
     return ''
