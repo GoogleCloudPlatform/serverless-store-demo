@@ -51,12 +51,20 @@ async function prepareOrderConfirmation(type, context) {
 
 /* eslint-disable no-unused-vars */
 exports.sendOrderConfirmation = async (data, context) => {
+  console.log('sendOrderConfirmation received message: ', data.data)
   const messageString = Buffer.from(data.data, `base64`).toString();
+  console.log('sendOrderConfirmation received message string: ', messageString)
   const message = JSON.parse(messageString);
+  console.log('sendOrderConfirmation parsed message: ', message)
   const eventType = message.event_type;
   const eventContext = message.event_context;
 
-  var mail = await prepareOrderConfirmation(eventType, eventContext);
-
-  return SendGrid.send(mail);
+  try {
+    var mail = await prepareOrderConfirmation(eventType, eventContext);
+    console.log('sendOrderConfirmation created mail: ', mail)
+    await SendGrid.send(mail)
+    console.log('sendOrderConfirmation successfully sent mail: ', mail);
+  } catch (error) {
+    console.log('sendOrderConfirmation error: ', error);
+  }
 };

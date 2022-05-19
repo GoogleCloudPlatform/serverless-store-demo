@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google-cloud/bigquery": "^2.0.3"
+    "@google-cloud/bigquery": "^2.0.3",
+    "@google-cloud/logging": "9.8.3"
   }
 }

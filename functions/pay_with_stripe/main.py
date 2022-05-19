@@ -31,6 +31,11 @@ from opencensus.ext.stackdriver import trace_exporter as stackdriver_exporter
 # from opencensus.trace.exporters.transports.background_thread import BackgroundThreadTransport
 import stripe
 
+# from google.cloud import logging
+# from google.cloud.logging.handlers import CloudLoggingHandler
+# from opencensus.trace import logging_exporter
+import logging
+
 API_KEY = os.environ.get('STRIPE_API_KEY')
 GCP_PROJECT = os.environ.get('GCP_PROJECT')
 PUBSUB_TOPIC_PAYMENT_COMPLETION = os.environ.get('PUBSUB_TOPIC_PAYMENT_COMPLETION')
@@ -40,8 +45,15 @@ publisher = pubsub_v1.PublisherClient()
 sde = stackdriver_exporter.StackdriverExporter()
 stripe.api_key = API_KEY
 
+# log_client = google.cloud.logging.Client()
+# log_cloud_handler = CloudLoggingHandler(log_client)
+# log_exporter = logging_exporter.LoggingExporter(handler=log_cloud_handler)
+
 def pay_with_stripe(data, context):
     tracer = Tracer(exporter=sde)
+
+    # logging_client = logging.Client()
+    # logger = logging_client.logger("pay_with_stripe logger")
 
     if 'data' in data:
         payment_request_json = base64.b64decode(data.get('data')).decode()
@@ -57,13 +69,13 @@ def pay_with_stripe(data, context):
             email = order_data.get('shipping').get('email')
 
             try:
-                charge = stripe.Charge.create(
-                    # For US Dollars, Stripe use Cent as the unit
-                    amount=int(amount * 100),
-                    currency='usd',
-                    description='Example charge',
-                    source=token
-                )
+                # charge = stripe.Charge.create(
+                #     # For US Dollars, Stripe use Cent as the unit
+                #     amount=int(amount * 100),
+                #     currency='usd',
+                #     description='Example charge',
+                #     source=token
+                # )
                 order_data['status'] = 'payment_processed'
                 event_type = 'payment_processed'
                 
@@ -73,6 +85,8 @@ def pay_with_stripe(data, context):
                 event_type = 'payment_failed'
             
             firestore.collection('orders').document(order_id).set(order_data)
+            # logger.log_text("pay_with_stripe updated order in firestore!")
+            logging.info("pay_with_stripe updated order in firestore!")
             stream_event(
                 topic_name=PUBSUB_TOPIC_PAYMENT_COMPLETION,
                 event_type=event_type,
@@ -82,6 +96,8 @@ def pay_with_stripe(data, context):
                     'order': order_data
                 }
             )
+            # logger.log_text("pay_with_stripe published payment completed event!")
+            logging.info("pay_with_stripe published payment completed event!")
 
     return ''
 

@@ -16,23 +16,23 @@
 # for more information about this specification.
 
 steps:
-  # Cloud Build Step #1: Clone source code from GitHub
+  # Cloud Build Step #0: Clone source code from GitHub
   - name: 'gcr.io/cloud-builders/git'
     args: ['clone', 'https://github.com/GoogleCloudPlatform/cloud-builders']
-  # Cloud Build Step #2: Replace placeholder configurations in the project with
+  # Cloud Build Step #1: Replace placeholder configurations in the project with
   #                      Project specific ones from Google Cloud Storage.
   - name: 'gcr.io/cloud-builders/gcs-fetcher'
     args:
       - '--type=Manifest'
       - '--location=gs://${PROJECT_ID}-build/cloudbuild/gcsFetcherManifest.json'
-  # Cloud Build Step #3: Deploy the App Engine app.
+  # Cloud Build Step #2: Deploy the App Engine app.
   - name: 'gcr.io/cloud-builders/gcloud'
     args: ['app', 'deploy', 'app/app.yaml']
-  # Cloud Build Step #4: Deploy the App Engine service for streaming events to
+  # Cloud Build Step #3: Deploy the App Engine service for streaming events to
   # Google BigQuery.
   - name: 'gcr.io/cloud-builders/gcloud'
     args: ['app', 'deploy', 'extras/streamEventsApp/app.yaml']
-  # Cloud Build Step #5: Deploy the Cloud Function for identifying pet product
+  # Cloud Build Step #4: Deploy the Cloud Function for identifying pet product
   # images using Google Cloud AutoML Vision API.
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
@@ -45,7 +45,7 @@ steps:
         '--trigger-topic=new-product',
         '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
       ]
-  # Cloud Build Step #6: Deploy the Cloud Function for labeling product images
+  # Cloud Build Step #5: Deploy the Cloud Function for labeling product images
   # using Google Cloud Vision API.
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
@@ -58,7 +58,7 @@ steps:
         '--trigger-topic=new-product',
         '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
       ]
-  # Cloud Build Step #7: Deploy the Cloud Function for processing payments using
+  # Cloud Build Step #6: Deploy the Cloud Function for processing payments using
   # Stripe API.
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
@@ -71,7 +71,7 @@ steps:
         '--trigger-topic=payment-process',
         '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
       ]
-  # Cloud Build Step #8: Deploy the Cloud Function for sending order confirmation
+  # Cloud Build Step #7: Deploy the Cloud Function for sending order confirmation
   # emails using SendGrid API.
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
@@ -84,7 +84,7 @@ steps:
         '--trigger-topic=payment-completion',
         '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
       ]
-  # Cloud Build Step #9: Deploy the Cloud Function for sending reminder emails
+  # Cloud Build Step #8: Deploy the Cloud Function for sending reminder emails
   # using SendGrid API.
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
@@ -97,7 +97,7 @@ steps:
         '--trigger-http',
         '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
       ]
-  # Cloud Build Step #10: Deploy the Cloud Function for processing uploaded
+  # Cloud Build Step #9: Deploy the Cloud Function for processing uploaded
   # images.
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
@@ -110,7 +110,7 @@ steps:
         '--trigger-http',
         '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
       ]
-  # Cloud Build Step #11: Deploy the Cloud Function for recommendations.
+  # Cloud Build Step #10: Deploy the Cloud Function for recommendations.
   # images.
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
@@ -122,4 +122,4 @@ steps:
         '--runtime=nodejs10',
         '--trigger-http',
       ]
-timeout: 1000s
+timeout: 2000s

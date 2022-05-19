@@ -3,3 +3,4 @@ google-cloud-pubsub==0.39.0
 stripe==2.15.0
 opencensus==0.3.1
 opencensus-ext-stackdriver==0.1.1
+google-cloud-logging==3.0.0

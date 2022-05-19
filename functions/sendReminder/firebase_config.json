@@ -1,8 +1,8 @@
 {
-    "apiKey": "YOUR-API-KEY",
-    "authDomain": "YOUR-AUTH-DOMAIN",
-    "databaseURL": "YOUR-DATABASE-URL",
-    "projectId": "YOUR-PROJECT-ID",
-    "storageBucket": "YOUR-STORAGE-BUCKET",
-    "messagingSenderId": "YOUR-MESSAGING-SENDER-ID"
+  "apiKey": "AIzaSyDvNYnQjbvaX3BWRTIu6_ksIp2EZnRY05I",
+  "authDomain": "ubc-serverless-compliance.firebaseapp.com",
+  "databaseURL": "https://ubc-serverless-compliance-default-rtdb.firebaseio.com",
+  "projectId": "ubc-serverless-compliance",
+  "storageBucket": "ubc-serverless-compliance.appspot.com",
+  "messagingSenderId": "211010247893"
 }

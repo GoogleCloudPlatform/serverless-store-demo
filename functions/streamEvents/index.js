@@ -16,7 +16,8 @@
 // See https://cloud.google.com/bigquery/streaming-data-into-bigquery for
 // more information.
 
-const {BigQuery} = require(`@google-cloud/bigquery`);
+const { BigQuery } = require(`@google-cloud/bigquery`);
+const { Logging } = require('@google-cloud/logging');
 
 const DATASET = process.env.BIGQUERY_DATASET;
 const TABLE = process.env.BIGQUERY_TABLE;
@@ -25,17 +26,26 @@ const bigquery = new BigQuery();
 const dataset = bigquery.dataset(DATASET);
 const table = dataset.table(TABLE);
 
-exports.streamEvents = async (req, res) => {
-    const messageString = Buffer.from(req.body.message.data, 'base64').toString();
-    const message = JSON.parse(messageString);
+const logging = new Logging({ projectId: 'ubc-serverless-compliance' });
 
-    try{
-        await table.insert({
-            eventType: message.event_type,
-            createdTime: message.created_time,
-            context: JSON.stringify(mesage.event_context)
-        })
-    } catch (error) {
-        console.log(error);
-    }
-}
+exports.streamEvents = async (req, res) => {
+  const messageString = Buffer.from(req.body.message.data, 'base64').toString();
+  const message = JSON.parse(messageString);
+
+  const log = logging.log('streamEvents log');
+
+  try {
+    await table.insert({
+      eventType: message.event_type,
+      createdTime: message.created_time,
+      context: JSON.stringify(message.event_context),
+    });
+    console.log('streamEvents successfully saved: ', message);
+    const entry = log.entry('streamEvents saved event to BigQuery');
+    log.write(entry);
+  } catch (error) {
+    console.log('streamEvents error: ', error);
+    const entry = log.entry(`streamEvents has error: ${error}`);
+    log.write(entry);
+  }
+};

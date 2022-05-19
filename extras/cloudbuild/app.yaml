@@ -18,7 +18,7 @@ env_variables:
   GCP_PROJECT: 'ubc-serverless-compliance'
   PUBSUB_TOPIC_NEW_PRODUCT: 'new-product'
   PUBSUB_TOPIC_PAYMENT_PROCESS: 'payment-process'
-  GCS_BUCKET: 'serverless-store-bucket-1-gokce'
+  GCS_BUCKET: 'serverless-store-bucket-2-gokce'
   FIREBASE_CONFIG: 'firebase_config.json'
 
 handlers:
