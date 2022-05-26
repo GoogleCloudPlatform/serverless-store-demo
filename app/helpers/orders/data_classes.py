@@ -70,6 +70,7 @@ class Order:
     shipping: Shipping
     status: str
     items: List[str]
+    userId: str
     id: str = None
 
 
@@ -91,7 +92,8 @@ class Order:
                 amount=data.get('amount'),
                 shipping=Shipping.deserialize(data.get('shipping')),
                 status=data.get('status'),
-                items=data.get('items')
+                items=data.get('items'),
+                userId=data.get('userId')
             )
 
         return None

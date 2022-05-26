@@ -7,3 +7,4 @@ package-lock.json
 .pytest_cache
 env
 .pyc
+.idea

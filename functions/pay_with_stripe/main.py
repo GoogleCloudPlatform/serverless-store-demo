@@ -22,18 +22,17 @@ import base64
 import json
 import os
 import time
+import datetime
 
 from google.cloud import firestore
 from google.cloud import pubsub_v1
 from opencensus.trace.tracer import Tracer
-# from opencensus.trace.exporters import stackdriver_exporter
 from opencensus.ext.stackdriver import trace_exporter as stackdriver_exporter
+from opencensus.trace.samplers import AlwaysOnSampler
 # from opencensus.trace.exporters.transports.background_thread import BackgroundThreadTransport
+from opencensus.trace import time_event
 import stripe
 
-# from google.cloud import logging
-# from google.cloud.logging.handlers import CloudLoggingHandler
-# from opencensus.trace import logging_exporter
 import logging
 
 API_KEY = os.environ.get('STRIPE_API_KEY')
@@ -42,18 +41,20 @@ PUBSUB_TOPIC_PAYMENT_COMPLETION = os.environ.get('PUBSUB_TOPIC_PAYMENT_COMPLETIO
 
 firestore = firestore.Client()
 publisher = pubsub_v1.PublisherClient()
-sde = stackdriver_exporter.StackdriverExporter()
+sde = stackdriver_exporter.StackdriverExporter(project_id="ubc-serverless-compliance")
 stripe.api_key = API_KEY
 
-# log_client = google.cloud.logging.Client()
-# log_cloud_handler = CloudLoggingHandler(log_client)
-# log_exporter = logging_exporter.LoggingExporter(handler=log_cloud_handler)
 
 def pay_with_stripe(data, context):
-    tracer = Tracer(exporter=sde)
+    tracer = Tracer(exporter=sde, sampler=AlwaysOnSampler())
 
-    # logging_client = logging.Client()
-    # logger = logging_client.logger("pay_with_stripe logger")
+    logging.info("pay_with_stripe span context: ")
+    logging.info(tracer.span_context)
+    logging.info("pay_with_stripe trace id: ")
+    logging.info(tracer.span_context.trace_id)
+    logging.info("pay_with_stripe span id: ")
+    logging.info(tracer.span_context.span_id)
+
 
     if 'data' in data:
         payment_request_json = base64.b64decode(data.get('data')).decode()
@@ -62,8 +63,22 @@ def pay_with_stripe(data, context):
         order_id = payment_request.get('event_context').get('order_id')
         trace_id = payment_request.get('event_context').get('trace_id')
         tracer.span_context.trace_id = trace_id
+        logging.info("pay_with_stripe event context: ")
+        logging.info(payment_request.get('event_context'))
+        logging.info("pay_with_stripe new span context: ") 
+        logging.info(tracer.span_context)
+        logging.info("pay_with_stripe new trace id: ")
+        logging.info(tracer.span_context.trace_id)
 
-        with tracer.span(name="process_payment"):
+        with tracer.span(name="process_payment") as span_process_payment:
+
+            clientEvent = time_event.MessageEvent(timestamp=datetime.datetime.utcnow(),
+                                                  id="EGYgJNh4JmOVWOC1yS4pnsK0GfF2",
+                                                  type=time_event.Type.RECEIVED, uncompressed_size_bytes=1024,
+                                                  compressed_size_bytes=512)
+            span_process_payment.add_message_event(clientEvent)
+            span_process_payment.add_annotation(description="span process payment receive description")
+
             order_data = firestore.collection('orders').document(order_id).get().to_dict()
             amount = order_data.get('amount')
             email = order_data.get('shipping').get('email')
@@ -78,11 +93,15 @@ def pay_with_stripe(data, context):
                 # )
                 order_data['status'] = 'payment_processed'
                 event_type = 'payment_processed'
+                # span.status = Status(0, "payment_processed")
+                # span_process_payment.add_annotation("payment is processed!")
                 
             except stripe.error.StripeError as err:
-                print(err)
+                logging.error(err)
                 order_data['status'] = 'payment_failed'
                 event_type = 'payment_failed'
+                # span.status = Status(1, "payment_failed")
+                # span_process_payment.add_annotation("payment process failed!")
             
             firestore.collection('orders').document(order_id).set(order_data)
             # logger.log_text("pay_with_stripe updated order in firestore!")
@@ -96,8 +115,13 @@ def pay_with_stripe(data, context):
                     'order': order_data
                 }
             )
-            # logger.log_text("pay_with_stripe published payment completed event!")
             logging.info("pay_with_stripe published payment completed event!")
+            serverEvent = time_event.MessageEvent(timestamp=datetime.datetime.utcnow(),
+                                                  id="EGYgJNh4JmOVWOC1yS4pnsK0GfF2",
+                                                  type=time_event.Type.SENT, uncompressed_size_bytes=1024,
+                                                  compressed_size_bytes=512)
+            span_process_payment.add_message_event(serverEvent)
+            span_process_payment.add_annotation(description="span process payment send description")
 
     return ''
 

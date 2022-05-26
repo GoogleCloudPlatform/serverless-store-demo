@@ -34,30 +34,30 @@ steps:
     args: ['app', 'deploy', 'extras/streamEventsApp/app.yaml']
   # Cloud Build Step #4: Deploy the Cloud Function for identifying pet product
   # images using Google Cloud AutoML Vision API.
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args:
-      [
-        'functions',
-        'deploy',
-        'automl',
-        '--source=./functions/automl/',
-        '--runtime=python37',
-        '--trigger-topic=new-product',
-        '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
-      ]
+  # - name: 'gcr.io/cloud-builders/gcloud'
+  #   args:
+  #     [
+  #       'functions',
+  #       'deploy',
+  #       'automl',
+  #       '--source=./functions/automl/',
+  #       '--runtime=python37',
+  #       '--trigger-topic=new-product',
+  #       '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
+  #     ]
   # Cloud Build Step #5: Deploy the Cloud Function for labeling product images
   # using Google Cloud Vision API.
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args:
-      [
-        'functions',
-        'deploy',
-        'detect_labels',
-        '--source=./functions/detect_labels/',
-        '--runtime=python37',
-        '--trigger-topic=new-product',
-        '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
-      ]
+  # - name: 'gcr.io/cloud-builders/gcloud'
+  #   args:
+  #     [
+  #       'functions',
+  #       'deploy',
+  #       'detect_labels',
+  #       '--source=./functions/detect_labels/',
+  #       '--runtime=python37',
+  #       '--trigger-topic=new-product',
+  #       '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
+  #     ]
   # Cloud Build Step #6: Deploy the Cloud Function for processing payments using
   # Stripe API.
   - name: 'gcr.io/cloud-builders/gcloud'
@@ -73,53 +73,53 @@ steps:
       ]
   # Cloud Build Step #7: Deploy the Cloud Function for sending order confirmation
   # emails using SendGrid API.
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args:
-      [
-        'functions',
-        'deploy',
-        'sendOrderConfirmation',
-        '--source=./functions/sendOrderConfirmation/',
-        '--runtime=nodejs10',
-        '--trigger-topic=payment-completion',
-        '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
-      ]
+  # - name: 'gcr.io/cloud-builders/gcloud'
+  #   args:
+  #     [
+  #       'functions',
+  #       'deploy',
+  #       'sendOrderConfirmation',
+  #       '--source=./functions/sendOrderConfirmation/',
+  #       '--runtime=nodejs10',
+  #       '--trigger-topic=payment-completion',
+  #       '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
+  #     ]
   # Cloud Build Step #8: Deploy the Cloud Function for sending reminder emails
   # using SendGrid API.
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args:
-      [
-        'functions',
-        'deploy',
-        'sendReminder',
-        '--source=./functions/sendReminder/',
-        '--runtime=nodejs10',
-        '--trigger-http',
-        '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
-      ]
+  # - name: 'gcr.io/cloud-builders/gcloud'
+  #   args:
+  #     [
+  #       'functions',
+  #       'deploy',
+  #       'sendReminder',
+  #       '--source=./functions/sendReminder/',
+  #       '--runtime=nodejs10',
+  #       '--trigger-http',
+  #       '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
+  #     ]
   # Cloud Build Step #9: Deploy the Cloud Function for processing uploaded
   # images.
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args:
-      [
-        'functions',
-        'deploy',
-        'upload_image',
-        '--source=./functions/upload_image/',
-        '--runtime=python37',
-        '--trigger-http',
-        '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
-      ]
+  # - name: 'gcr.io/cloud-builders/gcloud'
+  #   args:
+  #     [
+  #       'functions',
+  #       'deploy',
+  #       'upload_image',
+  #       '--source=./functions/upload_image/',
+  #       '--runtime=python37',
+  #       '--trigger-http',
+  #       '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
+  #     ]
   # Cloud Build Step #10: Deploy the Cloud Function for recommendations.
   # images.
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args:
-      [
-        'functions',
-        'deploy',
-        'recommendation',
-        '--source=./functions/recommendation/',
-        '--runtime=nodejs10',
-        '--trigger-http',
-      ]
+  # - name: 'gcr.io/cloud-builders/gcloud'
+  #   args:
+  #     [
+  #       'functions',
+  #       'deploy',
+  #       'recommendation',
+  #       '--source=./functions/recommendation/',
+  #       '--runtime=nodejs10',
+  #       '--trigger-http',
+  #     ]
 timeout: 2000s
