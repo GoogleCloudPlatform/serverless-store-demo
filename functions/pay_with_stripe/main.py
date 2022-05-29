@@ -21,18 +21,25 @@ Cloud Function for processing Stripe payments.
 import base64
 import json
 import os
+import random
 import time
 import datetime
 
 from google.cloud import firestore
 from google.cloud import pubsub_v1
-from opencensus.trace.tracer import Tracer
-from opencensus.ext.stackdriver import trace_exporter as stackdriver_exporter
-# from opencensus.trace.exporters import stackdriver_exporter
-from opencensus.trace.samplers import AlwaysOnSampler
-# from opencensus.trace.exporters.transports.background_thread import BackgroundThreadTransport
-from opencensus.trace import time_event
+# from opencensus.trace.tracer import Tracer
+# # from opencensus.ext.stackdriver import trace_exporter as stackdriver_exporter
+# # from opencensus.trace.exporters import stackdriver_exporter
+# from opencensus.trace.samplers import AlwaysOnSampler
+# # from opencensus.trace.exporters.transports.background_thread import BackgroundThreadTransport
+# from opencensus.trace import time_event
 import stripe
+
+from opentelemetry import trace
+from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.trace import Link
 
 import logging
 
@@ -42,43 +49,71 @@ PUBSUB_TOPIC_PAYMENT_COMPLETION = os.environ.get('PUBSUB_TOPIC_PAYMENT_COMPLETIO
 
 firestore = firestore.Client()
 publisher = pubsub_v1.PublisherClient()
-sde = stackdriver_exporter.StackdriverExporter(project_id="ubc-serverless-compliance")
+# sde = stackdriver_exporter.StackdriverExporter(project_id="ubc-serverless-compliance")
 stripe.api_key = API_KEY
 
 
 def pay_with_stripe(data, context):
-    tracer = Tracer(exporter=sde, sampler=AlwaysOnSampler())
+    # tracer = Tracer(exporter=sde, sampler=AlwaysOnSampler())
 
-    logging.info("pay_with_stripe span context: ")
-    logging.info(tracer.span_context)
-    logging.info("pay_with_stripe trace id: ")
-    logging.info(tracer.span_context.trace_id)
-    logging.info("pay_with_stripe span id: ")
-    logging.info(tracer.span_context.span_id)
+    # logging.info("pay_with_stripe span context: ")
+    # logging.info(tracer.span_context)
+    # logging.info("pay_with_stripe trace id: ")
+    # logging.info(tracer.span_context.trace_id)
+    # logging.info("pay_with_stripe span id: ")
+    # logging.info(tracer.span_context.span_id)
 
+    # [START opentelemetry_setup_exporter]
+    tracer_provider = TracerProvider()
+    cloud_trace_exporter = CloudTraceSpanExporter(project_id="ubc-serverless-compliance")
+    tracer_provider.add_span_processor(
+        # BatchSpanProcessor buffers spans and sends them in batches in a
+        # background thread. The default parameters are sensible, but can be
+        # tweaked to optimize your performance
+        BatchSpanProcessor(cloud_trace_exporter)
+    )
+    trace.set_tracer_provider(tracer_provider)
+    tracer = trace.get_tracer(__name__)
+    # [END opentelemetry_setup_exporter]
 
     if 'data' in data:
         payment_request_json = base64.b64decode(data.get('data')).decode()
         payment_request = json.loads(payment_request_json)
         token = payment_request.get('event_context').get('token')
         order_id = payment_request.get('event_context').get('order_id')
-        trace_id = payment_request.get('event_context').get('trace_id')
-        tracer.span_context.trace_id = trace_id
+        # trace_id = payment_request.get('event_context').get('trace_id')
+        # tracer.span_context.trace_id = trace_id
         logging.info("pay_with_stripe event context: ")
         logging.info(payment_request.get('event_context'))
-        logging.info("pay_with_stripe new span context: ") 
-        logging.info(tracer.span_context)
-        logging.info("pay_with_stripe new trace id: ")
-        logging.info(tracer.span_context.trace_id)
+        # logging.info("pay_with_stripe new trace id: ")
+        # logging.info(tracer.span_context.trace_id)
 
-        with tracer.span(name="process_payment") as span_process_payment:
+        # [START opentelemetry_trace_custom_span]
+        with tracer.start_span("pay_with_stripe_with_attribute") as current_span:
+            time.sleep(random.random() * 0.5)
 
-            clientEvent = time_event.MessageEvent(timestamp=datetime.datetime.utcnow(),
-                                                  id="EGYgJNh4JmOVWOC1yS4pnsK0GfF2",
-                                                  type=time_event.Type.RECEIVED, uncompressed_size_bytes=1024,
-                                                  compressed_size_bytes=512)
-            span_process_payment.add_message_event(clientEvent)
-            span_process_payment.add_annotation(description="span process payment receive description")
+            current_span.set_attribute("string_attribute", "str")
+            current_span.set_attribute("bool_attribute", False)
+            current_span.set_attribute("int_attribute", 3)
+            current_span.set_attribute("float_attribute", 3.14)
+        # [END opentelemetry_trace_custom_span]
+
+        # [START opentelemetry_trace_custom_span_events]
+
+        # Adding events to spans
+        with tracer.start_as_current_span("pay_with_stripe_with_event") as current_span:
+            time.sleep(random.random() * 0.5)
+            current_span.add_event(name="event_name")
+
+        # [END opentelemetry_trace_custom_span_events]
+
+        with tracer.start_as_current_span("pay_with_stripe_process_payment") as current_span:
+            # clientEvent = time_event.MessageEvent(timestamp=datetime.datetime.utcnow(),
+            #                                       id="EGYgJNh4JmOVWOC1yS4pnsK0GfF2",
+            #                                       type=time_event.Type.RECEIVED, uncompressed_size_bytes=1024,
+            #                                       compressed_size_bytes=512)
+            # span_process_payment.add_message_event(clientEvent)
+            # span_process_payment.add_annotation(description="span process payment receive description")
 
             order_data = firestore.collection('orders').document(order_id).get().to_dict()
             amount = order_data.get('amount')
@@ -94,19 +129,16 @@ def pay_with_stripe(data, context):
                 # )
                 order_data['status'] = 'payment_processed'
                 event_type = 'payment_processed'
-                # span.status = Status(0, "payment_processed")
-                # span_process_payment.add_annotation("payment is processed!")
                 
             except stripe.error.StripeError as err:
                 logging.error(err)
                 order_data['status'] = 'payment_failed'
                 event_type = 'payment_failed'
-                # span.status = Status(1, "payment_failed")
-                # span_process_payment.add_annotation("payment process failed!")
             
             firestore.collection('orders').document(order_id).set(order_data)
-            # logger.log_text("pay_with_stripe updated order in firestore!")
             logging.info("pay_with_stripe updated order in firestore!")
+            current_span.add_event(name="update firestore")
+
             stream_event(
                 topic_name=PUBSUB_TOPIC_PAYMENT_COMPLETION,
                 event_type=event_type,
@@ -117,12 +149,13 @@ def pay_with_stripe(data, context):
                 }
             )
             logging.info("pay_with_stripe published payment completed event!")
-            serverEvent = time_event.MessageEvent(timestamp=datetime.datetime.utcnow(),
-                                                  id="EGYgJNh4JmOVWOC1yS4pnsK0GfF2",
-                                                  type=time_event.Type.SENT, uncompressed_size_bytes=1024,
-                                                  compressed_size_bytes=512)
-            span_process_payment.add_message_event(serverEvent)
-            span_process_payment.add_annotation(description="span process payment send description")
+            # serverEvent = time_event.MessageEvent(timestamp=datetime.datetime.utcnow(),
+            #                                       id="EGYgJNh4JmOVWOC1yS4pnsK0GfF2",
+            #                                       type=time_event.Type.SENT, uncompressed_size_bytes=1024,
+            #                                       compressed_size_bytes=512)
+            # span_process_payment.add_message_event(serverEvent)
+            # span_process_payment.add_annotation(description="span process payment send description")
+            current_span.add_event(name="publish payment completed event")
 
     return ''
 

@@ -30,8 +30,8 @@ steps:
     args: ['app', 'deploy', 'app/app.yaml']
   # Cloud Build Step #3: Deploy the App Engine service for streaming events to
   # Google BigQuery.
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['app', 'deploy', 'extras/streamEventsApp/app.yaml']
+  # - name: 'gcr.io/cloud-builders/gcloud'
+  #   args: ['app', 'deploy', 'extras/streamEventsApp/app.yaml']
   # Cloud Build Step #4: Deploy the Cloud Function for identifying pet product
   # images using Google Cloud AutoML Vision API.
   # - name: 'gcr.io/cloud-builders/gcloud'
@@ -60,17 +60,17 @@ steps:
   #     ]
   # Cloud Build Step #6: Deploy the Cloud Function for processing payments using
   # Stripe API.
-  - name: 'gcr.io/cloud-builders/gcloud'
-    args:
-      [
-        'functions',
-        'deploy',
-        'pay_with_stripe',
-        '--source=./functions/pay_with_stripe/',
-        '--runtime=python37',
-        '--trigger-topic=payment-process',
-        '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
-      ]
+  # - name: 'gcr.io/cloud-builders/gcloud'
+  #   args:
+  #     [
+  #       'functions',
+  #       'deploy',
+  #       'pay_with_stripe',
+  #       '--source=./functions/pay_with_stripe/',
+  #       '--runtime=python37',
+  #       '--trigger-topic=payment-process',
+  #       '--env-vars-file=./extras/cloudbuild/functions_env_vars.yaml',
+  #     ]
   # Cloud Build Step #7: Deploy the Cloud Function for sending order confirmation
   # emails using SendGrid API.
   # - name: 'gcr.io/cloud-builders/gcloud'
