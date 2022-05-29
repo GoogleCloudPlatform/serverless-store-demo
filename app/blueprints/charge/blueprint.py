@@ -25,6 +25,7 @@ from middlewares.auth import auth_required
 from flask import Blueprint, render_template
 from opencensus.trace.tracer import Tracer
 from opencensus.ext.stackdriver import trace_exporter as stackdriver_exporter
+# from opencensus.trace.exporters import stackdriver_exporter
 from opencensus.trace import time_event
 
 from helpers import eventing, orders, product_catalog

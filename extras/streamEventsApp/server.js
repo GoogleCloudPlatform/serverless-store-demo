@@ -16,7 +16,7 @@
 // See https://cloud.google.com/bigquery/streaming-data-into-bigquery for
 // more information.
 
-const {BigQuery} = require(`@google-cloud/bigquery`);
+const { BigQuery } = require(`@google-cloud/bigquery`);
 // const { Logging } = require('@google-cloud/logging');
 const express = require(`express`);
 
@@ -27,40 +27,51 @@ const bigquery = new BigQuery();
 const dataset = bigquery.dataset(DATASET);
 const table = dataset.table(TABLE);
 
-// const logging = new Logging({ projectId: 'ubc-serverless-compliance' });
+const tracing = require('@opencensus/nodejs');
+const {
+  StackdriverTraceExporter,
+} = require('@opencensus/exporter-stackdriver');
+
+// Add your project id to the Stackdriver options
+const exporter = new StackdriverTraceExporter({
+  projectId: 'ubc-serverless-compliance',
+});
+
+tracing.registerExporter(exporter).start();
 
 const app = express();
 app.use(express.json());
+
+const tracer = tracing.start({ samplingRate: 1 }).tracer;
 
 app.get(`/`, (req, res) => {
   res.send(200);
 });
 
 app.post(`/stream`, async (req, res) => {
-  console.log('streamEvents received buffer: ', req.body.message.data)
-  const messageString = Buffer.from(req.body.message.data, `base64`).toString();
-  console.log('streamEvents received string: ', messageString)
-  const message = JSON.parse(messageString);
-  console.log('streamEvents parsed string: ', message)
+  const span = tracer.startChildSpan('stream events app');
+  span.start();
 
-  // const log = logging.log('stream log');
-  // const metadata = {
-  //   resource: {type: 'global'},
-  //   severity: 'INFO',
-  // };
+  console.log('streamEvents received buffer: ', req.body.message.data);
+  const messageString = Buffer.from(req.body.message.data, `base64`).toString();
+  console.log('streamEvents received string: ', messageString);
+  const message = JSON.parse(messageString);
+  console.log('streamEvents parsed string: ', message);
 
   try {
     await table.insert({
       eventType: message.event_type,
       createdTime: message.created_time,
-      context: JSON.stringify(message.event_context)
+      context: JSON.stringify(message.event_context),
     });
     console.log('streamEvents successfully saved: ', message);
-    // const entry = log.entry(metadata, 'streamEvents saved event to BigQuery');
-    // await log.write(entry);
+    span.addAnnotation('streamEvents succeeded!');
+    span.end();
     res.send(200);
   } catch (error) {
     console.log('streamEvents error: ', error);
+    span.addAnnotation('streamEvents failed!');
+    span.end();
     res.send(500, `Failed to stream the event to BigQuery.`);
   }
 });

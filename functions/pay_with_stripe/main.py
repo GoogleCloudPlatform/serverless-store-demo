@@ -28,6 +28,7 @@ from google.cloud import firestore
 from google.cloud import pubsub_v1
 from opencensus.trace.tracer import Tracer
 from opencensus.ext.stackdriver import trace_exporter as stackdriver_exporter
+# from opencensus.trace.exporters import stackdriver_exporter
 from opencensus.trace.samplers import AlwaysOnSampler
 # from opencensus.trace.exporters.transports.background_thread import BackgroundThreadTransport
 from opencensus.trace import time_event
