@@ -85,77 +85,60 @@ def pay_with_stripe(data, context):
         # tracer.span_context.trace_id = trace_id
         logging.info("pay_with_stripe event context: ")
         logging.info(payment_request.get('event_context'))
-        # logging.info("pay_with_stripe new trace id: ")
-        # logging.info(tracer.span_context.trace_id)
 
-        # [START opentelemetry_trace_custom_span]
-        with tracer.start_span("pay_with_stripe_with_attribute") as current_span:
-            time.sleep(random.random() * 0.5)
 
-            current_span.set_attribute("string_attribute", "str")
-            current_span.set_attribute("bool_attribute", False)
-            current_span.set_attribute("int_attribute", 3)
-            current_span.set_attribute("float_attribute", 3.14)
-        # [END opentelemetry_trace_custom_span]
+        with tracer.start_as_current_span("pay_with_stripe_process_payment", kind=trace.SpanKind.CONSUMER) as link_target:
+            link_target.set_attribute("userToken", "XYZ")
+            context = link_target.get_span_context()
 
-        # [START opentelemetry_trace_custom_span_events]
+            logging.info("pay_with_stripe_process_payment span: ")
+            logging.info(link_target)
 
-        # Adding events to spans
-        with tracer.start_as_current_span("pay_with_stripe_with_event") as current_span:
-            time.sleep(random.random() * 0.5)
-            current_span.add_event(name="event_name")
+            with tracer.start_as_current_span("process_with_payment_first_link", kind=trace.SpanKind.CONSUMER,
+                                              links=[Link(context)]) as first_link:
+                order_data = firestore.collection('orders').document(order_id).get().to_dict()
+                amount = order_data.get('amount')
+                email = order_data.get('shipping').get('email')
 
-        # [END opentelemetry_trace_custom_span_events]
+                try:
+                    # charge = stripe.Charge.create(
+                    #     # For US Dollars, Stripe use Cent as the unit
+                    #     amount=int(amount * 100),
+                    #     currency='usd',
+                    #     description='Example charge',
+                    #     source=token
+                    # )
+                    order_data['status'] = 'payment_processed'
+                    event_type = 'payment_processed'
 
-        with tracer.start_as_current_span("pay_with_stripe_process_payment") as current_span:
-            # clientEvent = time_event.MessageEvent(timestamp=datetime.datetime.utcnow(),
-            #                                       id="EGYgJNh4JmOVWOC1yS4pnsK0GfF2",
-            #                                       type=time_event.Type.RECEIVED, uncompressed_size_bytes=1024,
-            #                                       compressed_size_bytes=512)
-            # span_process_payment.add_message_event(clientEvent)
-            # span_process_payment.add_annotation(description="span process payment receive description")
-
-            order_data = firestore.collection('orders').document(order_id).get().to_dict()
-            amount = order_data.get('amount')
-            email = order_data.get('shipping').get('email')
-
-            try:
-                # charge = stripe.Charge.create(
-                #     # For US Dollars, Stripe use Cent as the unit
-                #     amount=int(amount * 100),
-                #     currency='usd',
-                #     description='Example charge',
-                #     source=token
-                # )
-                order_data['status'] = 'payment_processed'
-                event_type = 'payment_processed'
-                
-            except stripe.error.StripeError as err:
-                logging.error(err)
-                order_data['status'] = 'payment_failed'
-                event_type = 'payment_failed'
+                except stripe.error.StripeError as err:
+                    logging.error(err)
+                    order_data['status'] = 'payment_failed'
+                    event_type = 'payment_failed'
             
-            firestore.collection('orders').document(order_id).set(order_data)
-            logging.info("pay_with_stripe updated order in firestore!")
-            current_span.add_event(name="update firestore")
+                firestore.collection('orders').document(order_id).set(order_data)
+                logging.info("pay_with_stripe updated order in firestore!")
+                logging.info("process_with_payment_first_link span: ")
+                logging.info(first_link)
+                first_link.add_event(name="update firestore")
 
-            stream_event(
-                topic_name=PUBSUB_TOPIC_PAYMENT_COMPLETION,
-                event_type=event_type,
-                event_context={
-                    'order_id': order_id,
-                    'email': email,
-                    'order': order_data
-                }
-            )
-            logging.info("pay_with_stripe published payment completed event!")
-            # serverEvent = time_event.MessageEvent(timestamp=datetime.datetime.utcnow(),
-            #                                       id="EGYgJNh4JmOVWOC1yS4pnsK0GfF2",
-            #                                       type=time_event.Type.SENT, uncompressed_size_bytes=1024,
-            #                                       compressed_size_bytes=512)
-            # span_process_payment.add_message_event(serverEvent)
-            # span_process_payment.add_annotation(description="span process payment send description")
-            current_span.add_event(name="publish payment completed event")
+            with tracer.start_as_current_span("process_with_payment_second_link", kind=trace.SpanKind.CONSUMER,
+                                              links=[Link(context)]) as second_link:
+                stream_event(
+                    topic_name=PUBSUB_TOPIC_PAYMENT_COMPLETION,
+                    event_type=event_type,
+                    event_context={
+                        'order_id': order_id,
+                        'email': email,
+                        'order': order_data
+                    }
+                )
+                logging.info("pay_with_stripe published payment completed event!")
+                second_link.add_event(name="publish payment completed event")
+                logging.info("process_with_payment_second_link context: ")
+                logging.info(second_link.get_span_context())
+                logging.info("process_with_payment_second_link span: ")
+                logging.info(second_link)
 
     return ''
 

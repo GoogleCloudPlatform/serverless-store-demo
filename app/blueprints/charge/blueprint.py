@@ -39,7 +39,6 @@ from opentelemetry.trace import Link
 
 PUBSUB_TOPIC_PAYMENT_PROCESS = os.environ.get('PUBSUB_TOPIC_PAYMENT_PROCESS')
 
-# sde = stackdriver_exporter.StackdriverExporter(project_id="ubc-serverless-compliance")
 tracer_provider = TracerProvider()
 cloud_trace_exporter = CloudTraceSpanExporter(project_id="ubc-serverless-compliance")
 tracer_provider.add_span_processor(
@@ -79,14 +78,10 @@ def process(auth_context, form):
     # print("charge endpoint trace id: ", trace_id)
     # print("charge endpoint span id: ", tracer.span_context.span_id)
 
-    with tracer.start_span("charge_endpoint_with_attribute") as current_span:
-        current_span.set_attribute("string_attribute", "string")
-        current_span.set_attribute("bool_attribute", True)
-        current_span.set_attribute("int_attribute", 30)
-
     # # Prepare the order
     # # with tracer.span(name="prepare_order_info") as span_prepare_order_info:
-    with tracer.start_as_current_span("charge_endpoint_current_span") as current_span:
+    with tracer.start_as_current_span("charge_endpoint_current_span", kind=trace.SpanKind.PRODUCER) as link_target:
+        link_target.set_attribute("userToken", "XYZ")
         product_ids = form.product_ids.data
         stripe_token = form.stripeToken.data
         shipping = orders.Shipping(address_1=form.address_1.data,
@@ -105,41 +100,33 @@ def process(auth_context, form):
                                 items=product_ids,
                                 userId=uid)
         order_id = orders.add_order(order)
-        current_span.add_event(name="created order")
+        link_target.add_event(name="created order")
+        context = link_target.get_span_context()
+        print("charge_endpoint_current_span link_target: ", link_target)
 
-        # serverEvent = time_event.MessageEvent(timestamp=datetime.datetime.utcnow(), id="EGYgJNh4JmOVWOC1yS4pnsK0GfF2",
-        #                                       type=time_event.Type.SENT, uncompressed_size_bytes=1024, compressed_size_bytes=512)
-        # span_prepare_order_info.add_message_event(serverEvent)
-        # span_prepare_order_info.add_annotation(description="span prepare order info send description")
-
-    # Stream a Payment event
-    # with tracer.span(name="send_payment_event") as span_send_payment_event:
-        if stripe_token:
-            # Publish an event to the topic for new payments.
-            # Cloud Function pay_with_stripe subscribes to the topic and
-            # processes the payment using the Stripe API upon arrival of new
-            # events.
-            # Cloud Function streamEvents (or App Engine service stream-event)
-            # subscribes to the topic and saves the event to BigQuery for
-            # data analytics upon arrival of new events.
-            # print("charge endpoint event context: ", order_id, stripe_token, trace_id)
-            eventing.stream_event(
-                topic_name=PUBSUB_TOPIC_PAYMENT_PROCESS,
-                event_type='order_created',
-                event_context={
-                    'order_id': order_id,
-                    'token': stripe_token,
-                    # Pass the trace ID in the event so that Cloud Function
-                    # pay_with_stripe can continue the trace.
-                    # 'trace_id': trace_id // TODO: look at linking traces
-                }
-            )
-            current_span.add_event(name="published order created event")
-            # serverEvent = time_event.MessageEvent(timestamp=datetime.datetime.utcnow(),
-            #                                       id="EGYgJNh4JmOVWOC1yS4pnsK0GfF2",
-            #                                       type=time_event.Type.SENT, uncompressed_size_bytes=1024,
-            #                                       compressed_size_bytes=512)
-            # span_send_payment_event.add_message_event(serverEvent)
-            # span_send_payment_event.add_annotation(description="span send payment event send description")
+        # Stream a Payment event
+        with tracer.start_as_current_span("send_payment_event", kind=trace.SpanKind.PRODUCER, links=[Link(context)]) as span_send_payment_event:
+            if stripe_token:
+                # Publish an event to the topic for new payments.
+                # Cloud Function pay_with_stripe subscribes to the topic and
+                # processes the payment using the Stripe API upon arrival of new
+                # events.
+                # Cloud Function streamEvents (or App Engine service stream-event)
+                # subscribes to the topic and saves the event to BigQuery for
+                # data analytics upon arrival of new events.
+                # print("charge endpoint event context: ", order_id, stripe_token, trace_id)
+                eventing.stream_event(
+                    topic_name=PUBSUB_TOPIC_PAYMENT_PROCESS,
+                    event_type='order_created',
+                    event_context={
+                        'order_id': order_id,
+                        'token': stripe_token,
+                        # Pass the trace ID in the event so that Cloud Function
+                        # pay_with_stripe can continue the trace.
+                        # 'trace_id': trace_id // TODO: look at linking traces
+                    }
+                )
+                span_send_payment_event.add_event(name="published order created event")
+                print("charge_endpoint_current_span span_send_payment_event: ", span_send_payment_event)
 
     return render_template("charge.html", auth_context=auth_context)

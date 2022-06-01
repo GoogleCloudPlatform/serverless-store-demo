@@ -17,8 +17,13 @@
 // more information.
 
 const { BigQuery } = require(`@google-cloud/bigquery`);
-// const { Logging } = require('@google-cloud/logging');
 const express = require(`express`);
+const opentelemetry = require('@opentelemetry/api');
+const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node');
+const { SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-base');
+const {
+  TraceExporter,
+} = require('@google-cloud/opentelemetry-cloud-trace-exporter');
 
 const DATASET = process.env.BIGQUERY_DATASET;
 const TABLE = process.env.BIGQUERY_TABLE;
@@ -27,50 +32,64 @@ const bigquery = new BigQuery();
 const dataset = bigquery.dataset(DATASET);
 const table = dataset.table(TABLE);
 
-const tracing = require('@opencensus/nodejs');
-const {
-  StackdriverTraceExporter,
-} = require('@opencensus/exporter-stackdriver');
+// const tracing = require('@opencensus/nodejs');
+// const {
+//   StackdriverTraceExporter,
+// } = require('@opencensus/exporter-stackdriver');
 
-// Add your project id to the Stackdriver options
-const exporter = new StackdriverTraceExporter({
-  projectId: 'ubc-serverless-compliance',
-});
+// // Add your project id to the Stackdriver options
+// const exporter = new StackdriverTraceExporter({
+//   projectId: 'ubc-serverless-compliance',
+// });
 
-tracing.registerExporter(exporter).start();
+// tracing.registerExporter(exporter).start();
 
 const app = express();
 app.use(express.json());
 
-const tracer = tracing.start({ samplingRate: 1 }).tracer;
+// const tracer = tracing.start({ samplingRate: 1 }).tracer;
 
 app.get(`/`, (req, res) => {
   res.send(200);
 });
 
 app.post(`/stream`, async (req, res) => {
-  const span = tracer.startChildSpan('stream events app');
-  span.start();
+  // [START setup_exporter]
+  const provider = new NodeTracerProvider();
+  const exporter = new TraceExporter();
+  provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
+  // const span = tracer.startChildSpan('stream events app');
+  // span.start();
+  // [END setup_exporter]
 
-  console.log('streamEvents received buffer: ', req.body.message.data);
-  const messageString = Buffer.from(req.body.message.data, `base64`).toString();
-  console.log('streamEvents received string: ', messageString);
-  const message = JSON.parse(messageString);
-  console.log('streamEvents parsed string: ', message);
+  opentelemetry.trace.setGlobalTracerProvider(provider);
+  const tracer = opentelemetry.trace.getTracer('basic');
+  const span = tracer.startSpan('stream events to big query');
+  span.setAttribute('userToken', 'XYZ');
+  const messageString = Buffer.from(req.body.message.data, 'base64');
+  console.log('message string: ', messageString);
+  const message = messageString.toJSON();
+  // const messageData = req.body.message.data;
+  console.log('message: ', message);
 
   try {
-    await table.insert({
+    // const message = JSON.parse(atob(messageData));
+    // JSON.parse(atob(encoded));
+    // console.log('message object: ', message);
+    const parsedMessage = {
       eventType: message.event_type,
       createdTime: message.created_time,
       context: JSON.stringify(message.event_context),
-    });
-    console.log('streamEvents successfully saved: ', message);
-    span.addAnnotation('streamEvents succeeded!');
+    };
+    console.log('parsed message object: ', parsedMessage);
+    await table.insert(parsedMessage);
+    console.log('streamEvents successfully saved: ', parsedMessage);
+    span.addEvent('streamEvents succeeded!');
     span.end();
     res.send(200);
   } catch (error) {
     console.log('streamEvents error: ', error);
-    span.addAnnotation('streamEvents failed!');
+    span.addEvent('streamEvents failed!');
     span.end();
     res.send(500, `Failed to stream the event to BigQuery.`);
   }
