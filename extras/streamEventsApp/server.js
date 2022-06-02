@@ -67,23 +67,23 @@ app.post(`/stream`, async (req, res) => {
   const span = tracer.startSpan('stream events to big query');
   span.setAttribute('userToken', 'XYZ');
   const messageString = Buffer.from(req.body.message.data, 'base64');
-  console.log('message string: ', messageString);
-  const message = messageString.toJSON();
+  // console.log('message string: ', messageString);
+  // const message = messageString.toJSON();
   // const messageData = req.body.message.data;
-  console.log('message: ', message);
+  // console.log('message: ', message);
 
   try {
     // const message = JSON.parse(atob(messageData));
     // JSON.parse(atob(encoded));
     // console.log('message object: ', message);
-    const parsedMessage = {
-      eventType: message.event_type,
-      createdTime: message.created_time,
-      context: JSON.stringify(message.event_context),
-    };
-    console.log('parsed message object: ', parsedMessage);
-    await table.insert(parsedMessage);
-    console.log('streamEvents successfully saved: ', parsedMessage);
+    // const parsedMessage = {
+    //   eventType: message.event_type,
+    //   createdTime: message.created_time,
+    //   context: JSON.stringify(message.event_context),
+    // };
+    // console.log('parsed message object: ', parsedMessage);
+    // await table.insert(parsedMessage);
+    // console.log('streamEvents successfully saved: ', parsedMessage);
     span.addEvent('streamEvents succeeded!');
     span.end();
     res.send(200);

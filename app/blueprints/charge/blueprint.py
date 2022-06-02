@@ -17,7 +17,6 @@
 This module is the Flask blueprint for the charge page (/charge).
 """
 
-
 import os
 import datetime
 from middlewares.auth import auth_required
@@ -31,10 +30,11 @@ from flask import Blueprint, render_template
 from helpers import eventing, orders, product_catalog
 from middlewares.form_validation import checkout_form_validation_required
 
-from opentelemetry import trace
+from opentelemetry import trace, baggage
 from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from opentelemetry.trace import Link
 
 PUBSUB_TOPIC_PAYMENT_PROCESS = os.environ.get('PUBSUB_TOPIC_PAYMENT_PROCESS')
@@ -53,6 +53,7 @@ tracer = trace.get_tracer(__name__)
 
 charge_page = Blueprint('charge_page', __name__)
 
+
 @charge_page.route('/charge', methods=['POST'])
 @auth_required
 @checkout_form_validation_required
@@ -70,42 +71,48 @@ def process(auth_context, form):
        Rendered HTML page.
     """
 
-    # Create an OpenCensus tracer to trace each payment process, and export
-    # the data to Stackdriver Tracing.
-    # tracer = Tracer(exporter=sde)
-    # trace_id = tracer.span_context.trace_id
-    # print("charge endpoint span context: ", tracer.span_context)
-    # print("charge endpoint trace id: ", trace_id)
-    # print("charge endpoint span id: ", tracer.span_context.span_id)
-
-    # # Prepare the order
-    # # with tracer.span(name="prepare_order_info") as span_prepare_order_info:
-    with tracer.start_as_current_span("charge_endpoint_current_span", kind=trace.SpanKind.PRODUCER) as link_target:
-        link_target.set_attribute("userToken", "XYZ")
+    # Prepare the order
+    with tracer.start_as_current_span("charge_endpoint", kind=trace.SpanKind.PRODUCER) as root_span:
         product_ids = form.product_ids.data
         stripe_token = form.stripeToken.data
-        shipping = orders.Shipping(address_1=form.address_1.data,
-                                    address_2=form.address_2.data,
-                                    city=form.city.data,
-                                    state=form.state.data,
-                                    zip_code=form.zip_code.data,
-                                    email=form.email.data,
-                                    mobile=form.mobile.data)
-        amount = product_catalog.calculate_total_price(product_ids)
-        # get userId
         uid = auth_context.get('uid')
+        root_span.set_attribute("userToken", uid)
+
+        # root_span.get_span_context()
+
+        # prepare shipping
+        shipping = orders.Shipping(address_1=form.address_1.data,
+                                   address_2=form.address_2.data,
+                                   city=form.city.data,
+                                   state=form.state.data,
+                                   zip_code=form.zip_code.data,
+                                   email=form.email.data,
+                                   mobile=form.mobile.data)
+        amount = product_catalog.calculate_total_price(product_ids)
+
+        # prepare order
         order = orders.Order(amount=amount,
-                                shipping=shipping,
-                                status="order_created",
-                                items=product_ids,
-                                userId=uid)
+                             shipping=shipping,
+                             status="order_created",
+                             items=product_ids,
+                             userId=uid)
         order_id = orders.add_order(order)
-        link_target.add_event(name="created order")
-        context = link_target.get_span_context()
-        print("charge_endpoint_current_span link_target: ", link_target)
+
+        # trace event
+        root_span.add_event(name="created order")
+        parent_ctx = baggage.set_baggage("parentBaggageKey", "parentBaggageValue")
 
         # Stream a Payment event
-        with tracer.start_as_current_span("send_payment_event", kind=trace.SpanKind.PRODUCER, links=[Link(context)]) as span_send_payment_event:
+        with tracer.start_as_current_span("send_payment_event", kind=trace.SpanKind.PRODUCER, context=parent_ctx) \
+                as child_span:
+        # links=[Link(context)]) \
+            child_ctx = baggage.set_baggage("childBaggageKey", "childBaggageValue")
+            trace_id = child_span.get_span_context().trace_id
+            print("charge endpoint inject trace id: ", trace_id)
+            carrier = dict()
+            carrier['traceId'] = trace_id
+            TraceContextTextMapPropagator().inject(carrier=carrier)
+
             if stripe_token:
                 # Publish an event to the topic for new payments.
                 # Cloud Function pay_with_stripe subscribes to the topic and
@@ -123,10 +130,10 @@ def process(auth_context, form):
                         'token': stripe_token,
                         # Pass the trace ID in the event so that Cloud Function
                         # pay_with_stripe can continue the trace.
-                        # 'trace_id': trace_id // TODO: look at linking traces
-                    }
+                        # 'trace_id': trace_id // TODO: look at passing trace context
+                    },
+                    carrier=carrier
                 )
-                span_send_payment_event.add_event(name="published order created event")
-                print("charge_endpoint_current_span span_send_payment_event: ", span_send_payment_event)
+                child_span.add_event(name="published order created event")
 
     return render_template("charge.html", auth_context=auth_context)

@@ -28,7 +28,7 @@ publisher = pubsub_v1.PublisherClient()
 
 GCP_PROJECT = os.environ.get('GCP_PROJECT')
 
-def stream_event(topic_name, event_type, event_context):
+def stream_event(topic_name, event_type, event_context, carrier):
     """
     Helper function for publishing an event.
 
@@ -45,7 +45,8 @@ def stream_event(topic_name, event_type, event_context):
     request = {
         'event_type': event_type,
         'created_time': str(int(time.time())),
-        'event_context': event_context
+        'event_context': event_context,
+        'carrier': carrier
     }
     data = json.dumps(request).encode()
     publisher.publish(topic_path, data)

@@ -35,11 +35,12 @@ from google.cloud import pubsub_v1
 # from opencensus.trace import time_event
 import stripe
 
-from opentelemetry import trace
+from opentelemetry import trace, baggage
 from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Link
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 import logging
 
@@ -56,22 +57,10 @@ stripe.api_key = API_KEY
 def pay_with_stripe(data, context):
     # tracer = Tracer(exporter=sde, sampler=AlwaysOnSampler())
 
-    # logging.info("pay_with_stripe span context: ")
-    # logging.info(tracer.span_context)
-    # logging.info("pay_with_stripe trace id: ")
-    # logging.info(tracer.span_context.trace_id)
-    # logging.info("pay_with_stripe span id: ")
-    # logging.info(tracer.span_context.span_id)
-
     # [START opentelemetry_setup_exporter]
     tracer_provider = TracerProvider()
     cloud_trace_exporter = CloudTraceSpanExporter(project_id="ubc-serverless-compliance")
-    tracer_provider.add_span_processor(
-        # BatchSpanProcessor buffers spans and sends them in batches in a
-        # background thread. The default parameters are sensible, but can be
-        # tweaked to optimize your performance
-        BatchSpanProcessor(cloud_trace_exporter)
-    )
+    tracer_provider.add_span_processor(BatchSpanProcessor(cloud_trace_exporter))
     trace.set_tracer_provider(tracer_provider)
     tracer = trace.get_tracer(__name__)
     # [END opentelemetry_setup_exporter]
@@ -83,19 +72,22 @@ def pay_with_stripe(data, context):
         order_id = payment_request.get('event_context').get('order_id')
         # trace_id = payment_request.get('event_context').get('trace_id')
         # tracer.span_context.trace_id = trace_id
-        logging.info("pay_with_stripe event context: ")
-        logging.info(payment_request.get('event_context'))
+        logging.info("pay_with_stripe payload: ")
+        logging.info(payment_request)
+        carrier = payment_request.get('carrier')
+        logging.info("pay_with_stripe carrier: ")
+        logging.info(carrier) # read ctx?
+        ctx = TraceContextTextMapPropagator().extract(carrier=carrier)
+        logging.info("pay_with_stripe received context: ")
+        logging.info(ctx)
 
-
-        with tracer.start_as_current_span("pay_with_stripe_process_payment", kind=trace.SpanKind.CONSUMER) as link_target:
+        with tracer.start_as_current_span("pay_with_stripe_process_payment", context=ctx,
+                                          kind=trace.SpanKind.CONSUMER) as link_target:
             link_target.set_attribute("userToken", "XYZ")
-            context = link_target.get_span_context()
 
-            logging.info("pay_with_stripe_process_payment span: ")
-            logging.info(link_target)
-
-            with tracer.start_as_current_span("process_with_payment_first_link", kind=trace.SpanKind.CONSUMER,
-                                              links=[Link(context)]) as first_link:
+            with tracer.start_as_current_span("process_with_payment_first_link", context=ctx,
+                                              kind=trace.SpanKind.CONSUMER) as first_link:
+                                              # links=[Link(context)])
                 order_data = firestore.collection('orders').document(order_id).get().to_dict()
                 amount = order_data.get('amount')
                 email = order_data.get('shipping').get('email')
@@ -118,12 +110,14 @@ def pay_with_stripe(data, context):
             
                 firestore.collection('orders').document(order_id).set(order_data)
                 logging.info("pay_with_stripe updated order in firestore!")
-                logging.info("process_with_payment_first_link span: ")
-                logging.info(first_link)
+                logging.info("process_with_payment_first_link context: ")
+                logging.info(first_link.get_span_context())
+                # child_ctx = baggage.set_baggage("current_context", "child")
                 first_link.add_event(name="update firestore")
 
-            with tracer.start_as_current_span("process_with_payment_second_link", kind=trace.SpanKind.CONSUMER,
-                                              links=[Link(context)]) as second_link:
+            with tracer.start_as_current_span("process_with_payment_second_link", context=ctx,
+                                              kind=trace.SpanKind.CONSUMER) as second_link:
+                                              # links=[Link(context)])
                 stream_event(
                     topic_name=PUBSUB_TOPIC_PAYMENT_COMPLETION,
                     event_type=event_type,
@@ -137,8 +131,6 @@ def pay_with_stripe(data, context):
                 second_link.add_event(name="publish payment completed event")
                 logging.info("process_with_payment_second_link context: ")
                 logging.info(second_link.get_span_context())
-                logging.info("process_with_payment_second_link span: ")
-                logging.info(second_link)
 
     return ''
 
