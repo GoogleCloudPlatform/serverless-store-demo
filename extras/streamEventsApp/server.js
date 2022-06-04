@@ -19,11 +19,13 @@
 const { BigQuery } = require(`@google-cloud/bigquery`);
 const express = require(`express`);
 const opentelemetry = require('@opentelemetry/api');
+const { defaultTextMapGetter, ROOT_CONTEXT } = require('@opentelemetry/api');
 const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node');
 const { SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-base');
 const {
   TraceExporter,
 } = require('@google-cloud/opentelemetry-cloud-trace-exporter');
+const { W3CTraceContextPropagator } = require('@opentelemetry/core');
 
 const DATASET = process.env.BIGQUERY_DATASET;
 const TABLE = process.env.BIGQUERY_TABLE;
@@ -32,58 +34,61 @@ const bigquery = new BigQuery();
 const dataset = bigquery.dataset(DATASET);
 const table = dataset.table(TABLE);
 
-// const tracing = require('@opencensus/nodejs');
-// const {
-//   StackdriverTraceExporter,
-// } = require('@opencensus/exporter-stackdriver');
-
-// // Add your project id to the Stackdriver options
-// const exporter = new StackdriverTraceExporter({
-//   projectId: 'ubc-serverless-compliance',
-// });
-
-// tracing.registerExporter(exporter).start();
-
 const app = express();
 app.use(express.json());
 
-// const tracer = tracing.start({ samplingRate: 1 }).tracer;
+const provider = new NodeTracerProvider();
+const exporter = new TraceExporter();
+provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
+opentelemetry.trace.setGlobalTracerProvider(provider);
+const propagator = new W3CTraceContextPropagator();
 
 app.get(`/`, (req, res) => {
   res.send(200);
 });
 
 app.post(`/stream`, async (req, res) => {
-  // [START setup_exporter]
-  const provider = new NodeTracerProvider();
-  const exporter = new TraceExporter();
-  provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
-  // const span = tracer.startChildSpan('stream events app');
-  // span.start();
-  // [END setup_exporter]
-
-  opentelemetry.trace.setGlobalTracerProvider(provider);
   const tracer = opentelemetry.trace.getTracer('basic');
-  const span = tracer.startSpan('stream events to big query');
-  span.setAttribute('userToken', 'XYZ');
-  const messageString = Buffer.from(req.body.message.data, 'base64');
+  // const span = tracer.startSpan('stream events to big query');
+  // span.setAttribute('userToken', 'XYZ');
+  // const messageBuffer = Buffer.from(req.body.message.data, 'base64');
+  // const messageString = JSON.stringify(messageBuffer);
   // console.log('message string: ', messageString);
-  // const message = messageString.toJSON();
-  // const messageData = req.body.message.data;
-  // console.log('message: ', message);
+  // const message = JSON.parse(messageString);
+  // console.log('message: ', req.body.message.data);
+
+  const data = {
+    event_type: 'order_created',
+    created_time: '1654183494',
+    event_context: {
+      order_id: 'fc94a512ba0647139db253acf21ae970',
+      token: 'tok_1L6FtJKnhLAxpFo9iGZoNdFD',
+    },
+    carrier: {
+      uid: 'EGYgJNh4JmOVWOC1yS4pnsK0GfF2',
+      traceparent: '00-827668a22e2ab39f9157230f7e11d84d-df7925cd20552b11-01',
+    },
+  };
+
+  const ctx = propagator.extract(
+    ROOT_CONTEXT,
+    data.carrier,
+    defaultTextMapGetter
+  );
+  console.log('context: ', ctx);
+
+  // const span = tracer.startSpan('stream to bigquery', undefined, ctx);
+  const span = tracer.startSpan('stream to bigquery');
+  span.setAttribute('userToken', data.carrier.uid);
 
   try {
-    // const message = JSON.parse(atob(messageData));
-    // JSON.parse(atob(encoded));
-    // console.log('message object: ', message);
-    // const parsedMessage = {
-    //   eventType: message.event_type,
-    //   createdTime: message.created_time,
-    //   context: JSON.stringify(message.event_context),
-    // };
-    // console.log('parsed message object: ', parsedMessage);
-    // await table.insert(parsedMessage);
-    // console.log('streamEvents successfully saved: ', parsedMessage);
+    const parsedMessage = {
+      eventType: data.event_type,
+      createdTime: data.created_time,
+      context: JSON.stringify(data.event_context),
+    };
+    await table.insert(parsedMessage);
+    console.log('streamEvents successfully saved: ', parsedMessage);
     span.addEvent('streamEvents succeeded!');
     span.end();
     res.send(200);

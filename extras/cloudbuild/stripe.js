@@ -15,9 +15,7 @@
 // Script for configuring Stripe.js.
 // See https://stripe.com/docs for more information.
 
-var stripe = Stripe(
-  'pk_test_51KzULgKnhLAxpFo9tqe2obJTAwYBgJ9sjIF6RCepzBPTgEdFHYqqu7BpYG1PuVukINy6NGutNLLTJ9N5tMjPenCn00Vuj7tOp0'
-);
+var stripe = Stripe('');
 var elements = stripe.elements();
 var style = {
   base: {

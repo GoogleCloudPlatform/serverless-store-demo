@@ -27,12 +27,6 @@ import datetime
 
 from google.cloud import firestore
 from google.cloud import pubsub_v1
-# from opencensus.trace.tracer import Tracer
-# # from opencensus.ext.stackdriver import trace_exporter as stackdriver_exporter
-# # from opencensus.trace.exporters import stackdriver_exporter
-# from opencensus.trace.samplers import AlwaysOnSampler
-# # from opencensus.trace.exporters.transports.background_thread import BackgroundThreadTransport
-# from opencensus.trace import time_event
 import stripe
 
 from opentelemetry import trace, baggage
@@ -50,12 +44,10 @@ PUBSUB_TOPIC_PAYMENT_COMPLETION = os.environ.get('PUBSUB_TOPIC_PAYMENT_COMPLETIO
 
 firestore = firestore.Client()
 publisher = pubsub_v1.PublisherClient()
-# sde = stackdriver_exporter.StackdriverExporter(project_id="ubc-serverless-compliance")
 stripe.api_key = API_KEY
 
 
 def pay_with_stripe(data, context):
-    # tracer = Tracer(exporter=sde, sampler=AlwaysOnSampler())
 
     # [START opentelemetry_setup_exporter]
     tracer_provider = TracerProvider()
@@ -70,24 +62,23 @@ def pay_with_stripe(data, context):
         payment_request = json.loads(payment_request_json)
         token = payment_request.get('event_context').get('token')
         order_id = payment_request.get('event_context').get('order_id')
-        # trace_id = payment_request.get('event_context').get('trace_id')
-        # tracer.span_context.trace_id = trace_id
-        logging.info("pay_with_stripe payload: ")
-        logging.info(payment_request)
+
         carrier = payment_request.get('carrier')
         logging.info("pay_with_stripe carrier: ")
-        logging.info(carrier) # read ctx?
+        logging.info(carrier)
         ctx = TraceContextTextMapPropagator().extract(carrier=carrier)
         logging.info("pay_with_stripe received context: ")
         logging.info(ctx)
 
         with tracer.start_as_current_span("pay_with_stripe_process_payment", context=ctx,
                                           kind=trace.SpanKind.CONSUMER) as link_target:
-            link_target.set_attribute("userToken", "XYZ")
+            userToken = carrier.get('uid')
+            link_target.set_attribute("userToken", userToken)
+            logging.info("pay_with_stripe link_target context: ")
+            logging.info(link_target.get_span_context())
 
-            with tracer.start_as_current_span("process_with_payment_first_link", context=ctx,
+            with tracer.start_as_current_span("process_with_payment_first_link",
                                               kind=trace.SpanKind.CONSUMER) as first_link:
-                                              # links=[Link(context)])
                 order_data = firestore.collection('orders').document(order_id).get().to_dict()
                 amount = order_data.get('amount')
                 email = order_data.get('shipping').get('email')
@@ -115,9 +106,12 @@ def pay_with_stripe(data, context):
                 # child_ctx = baggage.set_baggage("current_context", "child")
                 first_link.add_event(name="update firestore")
 
-            with tracer.start_as_current_span("process_with_payment_second_link", context=ctx,
+            with tracer.start_as_current_span("process_with_payment_second_link",
                                               kind=trace.SpanKind.CONSUMER) as second_link:
-                                              # links=[Link(context)])
+                carrier = dict()
+                carrier['uid'] = userToken
+                TraceContextTextMapPropagator().inject(carrier=carrier)
+
                 stream_event(
                     topic_name=PUBSUB_TOPIC_PAYMENT_COMPLETION,
                     event_type=event_type,
@@ -125,7 +119,8 @@ def pay_with_stripe(data, context):
                         'order_id': order_id,
                         'email': email,
                         'order': order_data
-                    }
+                    },
+                    carrier=carrier
                 )
                 logging.info("pay_with_stripe published payment completed event!")
                 second_link.add_event(name="publish payment completed event")
@@ -134,12 +129,13 @@ def pay_with_stripe(data, context):
 
     return ''
 
-def stream_event(topic_name, event_type, event_context):
+def stream_event(topic_name, event_type, event_context, carrier):
     topic_path = publisher.topic_path(GCP_PROJECT, topic_name)
     request = {
         'event_type': event_type,
         'created_time': str(int(time.time())),
-        'event_context': event_context
+        'event_context': event_context,
+        'carrier': carrier
     }
     data = json.dumps(request).encode()
     publisher.publish(topic_path, data)

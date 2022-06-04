@@ -18,14 +18,9 @@ This module is the Flask blueprint for the charge page (/charge).
 """
 
 import os
-import datetime
 from middlewares.auth import auth_required
 
 from flask import Blueprint, render_template
-# from opencensus.trace.tracer import Tracer
-# from opencensus.ext.stackdriver import trace_exporter as stackdriver_exporter
-# # from opencensus.trace.exporters import stackdriver_exporter
-# from opencensus.trace import time_event
 
 from helpers import eventing, orders, product_catalog
 from middlewares.form_validation import checkout_form_validation_required
@@ -42,9 +37,6 @@ PUBSUB_TOPIC_PAYMENT_PROCESS = os.environ.get('PUBSUB_TOPIC_PAYMENT_PROCESS')
 tracer_provider = TracerProvider()
 cloud_trace_exporter = CloudTraceSpanExporter(project_id="ubc-serverless-compliance")
 tracer_provider.add_span_processor(
-    # BatchSpanProcessor buffers spans and sends them in batches in a
-    # background thread. The default parameters are sensible, but can be
-    # tweaked to optimize your performance
     BatchSpanProcessor(cloud_trace_exporter)
 )
 trace.set_tracer_provider(tracer_provider)
@@ -78,8 +70,6 @@ def process(auth_context, form):
         uid = auth_context.get('uid')
         root_span.set_attribute("userToken", uid)
 
-        # root_span.get_span_context()
-
         # prepare shipping
         shipping = orders.Shipping(address_1=form.address_1.data,
                                    address_2=form.address_2.data,
@@ -100,18 +90,19 @@ def process(auth_context, form):
 
         # trace event
         root_span.add_event(name="created order")
-        parent_ctx = baggage.set_baggage("parentBaggageKey", "parentBaggageValue")
+        context = root_span.get_span_context()
+        print("charge endpoint root span context: ", context)
+        # parent_ctx = baggage.set_baggage("parentBaggageKey", "parentBaggageValue")
 
         # Stream a Payment event
-        with tracer.start_as_current_span("send_payment_event", kind=trace.SpanKind.PRODUCER, context=parent_ctx) \
-                as child_span:
-        # links=[Link(context)]) \
-            child_ctx = baggage.set_baggage("childBaggageKey", "childBaggageValue")
-            trace_id = child_span.get_span_context().trace_id
-            print("charge endpoint inject trace id: ", trace_id)
+        with tracer.start_as_current_span("send_payment_event", kind=trace.SpanKind.PRODUCER) as child_span:
+            # child_ctx = baggage.set_baggage("childBaggageKey", "childBaggageValue")
             carrier = dict()
-            carrier['traceId'] = trace_id
+            carrier['uid'] = uid
             TraceContextTextMapPropagator().inject(carrier=carrier)
+
+            context = child_span.get_span_context()
+            print("charge endpoint child span context: ", context)
 
             if stripe_token:
                 # Publish an event to the topic for new payments.
@@ -128,9 +119,6 @@ def process(auth_context, form):
                     event_context={
                         'order_id': order_id,
                         'token': stripe_token,
-                        # Pass the trace ID in the event so that Cloud Function
-                        # pay_with_stripe can continue the trace.
-                        # 'trace_id': trace_id // TODO: look at passing trace context
                     },
                     carrier=carrier
                 )
