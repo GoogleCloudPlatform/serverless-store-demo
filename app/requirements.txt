@@ -1,4 +1,4 @@
-flask==1.0.2
+flask==2.3.2
 Flask-WTF==0.14.2
 Jinja2==2.10
 google-cloud-storage==1.13.0
